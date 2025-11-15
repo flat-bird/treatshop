@@ -31,16 +31,18 @@ export default function ProductCard({ product }: ProductCardProps) {
     return null;
   }
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const price = product.price;
+
+  const handleAddToCart = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setIsAdding(true);
     await addItem({
       id: product.id,
       name: product.name,
-      priceId: product.price.id,
-      price: product.price.amount / 100,
-      currency: product.price.currency,
+      priceId: price.id,
+      price: price.amount / 100,
+      currency: price.currency,
       image: product.images[0],
     });
     setIsAdding(false);
@@ -48,8 +50,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const formattedPrice = new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: product.price.currency.toUpperCase(),
-  }).format(product.price.amount / 100);
+    currency: price.currency.toUpperCase(),
+  }).format(price.amount / 100);
 
   return (
     <Link href={`/shop/${product.id}`} className="block">

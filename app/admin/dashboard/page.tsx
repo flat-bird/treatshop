@@ -386,16 +386,19 @@ export default function AdminDashboard() {
                         />
                       </div>
                     )}
-                    {product.price && (
-                      <div className="mt-4 text-center">
-                        <p className="text-lg font-semibold text-[var(--foreground)]">
-                          {new Intl.NumberFormat('en-US', {
-                            style: 'currency',
-                            currency: product.price.currency.toUpperCase(),
-                          }).format(product.price.amount / 100)}
-                        </p>
-                      </div>
-                    )}
+                    {product.price && (() => {
+                      const price = product.price!;
+                      return (
+                        <div className="mt-4 text-center">
+                          <p className="text-lg font-semibold text-[var(--foreground)]">
+                            {new Intl.NumberFormat('en-US', {
+                              style: 'currency',
+                              currency: price.currency.toUpperCase(),
+                            }).format(price.amount / 100)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

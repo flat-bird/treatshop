@@ -30,15 +30,16 @@ async function fetchProductsData() {
         limit: 1,
       });
 
+      const price = prices.data[0];
       return {
         id: product.id,
         name: product.name,
         description: product.description,
         images: product.images,
-        price: prices.data[0] ? {
-          id: prices.data[0].id,
-          amount: prices.data[0].unit_amount,
-          currency: prices.data[0].currency,
+        price: price && price.unit_amount !== null ? {
+          id: price.id,
+          amount: price.unit_amount,
+          currency: price.currency,
         } : null,
       };
     })

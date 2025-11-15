@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
           (feature: { name?: string }) => feature.name === 'UNAVAILABLE'
         );
 
+        const price = prices.data[0];
         return {
           id: product.id,
           name: product.name,
@@ -41,10 +42,10 @@ export async function GET(request: NextRequest) {
           images: product.images,
           marketing_features: product.marketing_features || [],
           isUnavailable,
-          price: prices.data[0] ? {
-            id: prices.data[0].id,
-            amount: prices.data[0].unit_amount,
-            currency: prices.data[0].currency,
+          price: price && price.unit_amount !== null ? {
+            id: price.id,
+            amount: price.unit_amount,
+            currency: price.currency,
           } : null,
         };
       })

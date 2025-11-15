@@ -4,7 +4,7 @@ import Link from 'next/link';
 interface ButtonProps {
   children: React.ReactNode;
   href?: string;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void | Promise<void>;
   variant?: 'primary' | 'secondary';
   className?: string;
   type?: 'button' | 'submit';

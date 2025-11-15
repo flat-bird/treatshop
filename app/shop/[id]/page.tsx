@@ -57,13 +57,14 @@ export default function ProductDetailPage() {
   const handleAddToCart = async () => {
     if (!product || !product.price) return;
 
+    const price = product.price;
     setIsAdding(true);
     await addItem({
       id: product.id,
       name: product.name,
-      priceId: product.price.id,
-      price: product.price.amount / 100,
-      currency: product.price.currency,
+      priceId: price.id,
+      price: price.amount / 100,
+      currency: price.currency,
       image: product.images[0],
     });
     setIsAdding(false);
@@ -95,10 +96,11 @@ export default function ProductDetailPage() {
     );
   }
 
+  const price = product.price;
   const formattedPrice = new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: product.price.currency.toUpperCase(),
-  }).format(product.price.amount / 100);
+    currency: price.currency.toUpperCase(),
+  }).format(price.amount / 100);
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-6xl">

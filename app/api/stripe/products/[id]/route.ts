@@ -53,6 +53,14 @@ export async function GET(
       );
     }
 
+    const price = prices.data[0];
+    if (!price.unit_amount) {
+      return NextResponse.json(
+        { error: 'Product price amount not found' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       id: product.id,
       name: product.name,
@@ -60,9 +68,9 @@ export async function GET(
       images: product.images,
       marketing_features: product.marketing_features || [],
       price: {
-        id: prices.data[0].id,
-        amount: prices.data[0].unit_amount,
-        currency: prices.data[0].currency,
+        id: price.id,
+        amount: price.unit_amount,
+        currency: price.currency,
       },
     });
   } catch (error: any) {

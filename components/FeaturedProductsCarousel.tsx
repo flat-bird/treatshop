@@ -42,13 +42,14 @@ export default function FeaturedProductsCarousel({ products }: FeaturedProductsC
   const handleAddToCart = async (product: Product) => {
     if (!product.price) return;
     
+    const price = product.price;
     setIsAdding(product.id);
     await addItem({
       id: product.id,
       name: product.name,
-      priceId: product.price.id,
-      price: product.price.amount / 100,
-      currency: product.price.currency,
+      priceId: price.id,
+      price: price.amount / 100,
+      currency: price.currency,
       image: product.images[0],
     });
     setIsAdding(null);
@@ -112,10 +113,11 @@ export default function FeaturedProductsCarousel({ products }: FeaturedProductsC
           {visibleProducts.map((product) => {
             if (!product.price) return null;
 
+            const price = product.price;
             const formattedPrice = new Intl.NumberFormat('en-US', {
               style: 'currency',
-              currency: product.price.currency.toUpperCase(),
-            }).format(product.price.amount / 100);
+              currency: price.currency.toUpperCase(),
+            }).format(price.amount / 100);
 
             return (
               <div
