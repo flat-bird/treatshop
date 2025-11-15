@@ -70,8 +70,7 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case 'payment_intent.succeeded':
-      case 'checkout.session.completed':
-      case 'payment_link.payment_succeeded': {
+      case 'checkout.session.completed': {
         const phoneNumber = process.env.TWILIO_RECIPIENT_PHONE_NUMBER;
         
         if (!phoneNumber) {
@@ -93,11 +92,20 @@ export async function POST(request: NextRequest) {
           amount = session.amount_total / 100;
           currency = session.currency;
           message = `Checkout completed! Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received.`;
-        } else if (event.type === 'payment_link.payment_succeeded') {
-          const paymentLink = event.data.object as any;
-          message = `Payment link payment succeeded!`;
         }
 
+        await sendSMS(phoneNumber, message);
+        break;
+      }
+      case 'payment_link.payment_succeeded': {
+        const phoneNumber = process.env.TWILIO_RECIPIENT_PHONE_NUMBER;
+        
+        if (!phoneNumber) {
+          console.warn('TWILIO_RECIPIENT_PHONE_NUMBER is not set, skipping SMS');
+          return NextResponse.json({ received: true });
+        }
+
+        const message = 'Payment link payment succeeded!';
         await sendSMS(phoneNumber, message);
         break;
       }
