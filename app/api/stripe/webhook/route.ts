@@ -68,49 +68,37 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    switch (event.type) {
-      case 'payment_intent.succeeded':
-      case 'checkout.session.completed': {
-        const phoneNumber = process.env.TWILIO_RECIPIENT_PHONE_NUMBER;
-        
-        if (!phoneNumber) {
-          console.warn('TWILIO_RECIPIENT_PHONE_NUMBER is not set, skipping SMS');
-          return NextResponse.json({ received: true });
-        }
-
-        let message = 'Payment received!';
-        let amount = null;
-        let currency = 'usd';
-
-        if (event.type === 'payment_intent.succeeded') {
-          const paymentIntent = event.data.object as any;
-          amount = paymentIntent.amount / 100;
-          currency = paymentIntent.currency;
-          message = `Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received successfully!`;
-        } else if (event.type === 'checkout.session.completed') {
-          const session = event.data.object as any;
-          amount = session.amount_total / 100;
-          currency = session.currency;
-          message = `Checkout completed! Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received.`;
-        }
-
-        await sendSMS(phoneNumber, message);
-        break;
+    const eventType = event.type as string;
+    
+    if (eventType === 'payment_intent.succeeded' || eventType === 'checkout.session.completed' || eventType === 'payment_link.payment_succeeded') {
+      const phoneNumber = process.env.TWILIO_RECIPIENT_PHONE_NUMBER;
+      
+      if (!phoneNumber) {
+        console.warn('TWILIO_RECIPIENT_PHONE_NUMBER is not set, skipping SMS');
+        return NextResponse.json({ received: true });
       }
-      case 'payment_link.payment_succeeded': {
-        const phoneNumber = process.env.TWILIO_RECIPIENT_PHONE_NUMBER;
-        
-        if (!phoneNumber) {
-          console.warn('TWILIO_RECIPIENT_PHONE_NUMBER is not set, skipping SMS');
-          return NextResponse.json({ received: true });
-        }
 
-        const message = 'Payment link payment succeeded!';
-        await sendSMS(phoneNumber, message);
-        break;
+      let message = 'Payment received!';
+      let amount = null;
+      let currency = 'usd';
+
+      if (eventType === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object as any;
+        amount = paymentIntent.amount / 100;
+        currency = paymentIntent.currency;
+        message = `Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received successfully!`;
+      } else if (eventType === 'checkout.session.completed') {
+        const session = event.data.object as any;
+        amount = session.amount_total / 100;
+        currency = session.currency;
+        message = `Checkout completed! Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received.`;
+      } else if (eventType === 'payment_link.payment_succeeded') {
+        message = 'Payment link payment succeeded!';
       }
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+
+      await sendSMS(phoneNumber, message);
+    } else {
+      console.log(`Unhandled event type: ${eventType}`);
     }
 
     return NextResponse.json({ received: true });
