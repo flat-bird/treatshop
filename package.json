@@ -9,7 +9,7 @@
     "lint": "eslint",
     "pages:build": "npx opennextjs-cloudflare build",
     "preview": "npx opennextjs-cloudflare preview",
-    "deploy": "npx opennextjs-cloudflare deploy"
+    "deploy": "npx opennextjs-cloudflare build && npx wrangler pages deploy .opennext"
   },
   "dependencies": {
     "next": "16.0.1",
