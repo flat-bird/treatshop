@@ -2,9 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import Button from '@/components/Button';
-import ProductCard from '@/components/ProductCard';
 import FeaturedProductsCarousel from '@/components/FeaturedProductsCarousel';
 
 interface Product {
