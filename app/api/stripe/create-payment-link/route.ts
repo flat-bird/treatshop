@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         allowed_countries: ['CA'],
       },
       allow_promotion_codes: true,
-      customer_creation: 'always',
+      customer_creation: 'if_required',
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
