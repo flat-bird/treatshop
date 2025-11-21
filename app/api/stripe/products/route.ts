@@ -15,10 +15,11 @@ async function fetchProductsData() {
     (product) => {
       const isArchived = product.metadata?.archived === 'true';
       const isShipping = product.id === process.env.NEXT_PUBLIC_SHIPPING_PRODUCT_ID;
+      const isLocalDelivery = product.id === 'prod_TSgjj9alx4MKo3';
       const isUnavailable = product.marketing_features?.some(
         (feature: { name?: string }) => feature.name === 'UNAVAILABLE'
       );
-      return !isArchived && !isShipping && !isUnavailable;
+      return !isArchived && !isShipping && !isUnavailable && !isLocalDelivery;
     }
   );
 
