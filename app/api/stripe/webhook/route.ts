@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
+import Stripe from 'stripe';
 import twilio from 'twilio';
 
 export const runtime = 'nodejs';
@@ -107,14 +108,18 @@ export async function POST(request: NextRequest) {
             const customer = typeof sessionWithDetails.customer === 'string'
               ? await stripe.customers.retrieve(sessionWithDetails.customer)
               : sessionWithDetails.customer;
-            customerName = customer.name || customer.email || 'Customer';
+            if (customer.deleted) {
+              customerName = 'Customer';
+            } else {
+              customerName = customer.name || customer.email || 'Customer';
+            }
           } catch (err) {
             console.error('Error retrieving customer:', err);
           }
         }
         
-        if (sessionWithDetails.shipping_details?.address) {
-          const addr = sessionWithDetails.shipping_details.address;
+        if ((sessionWithDetails as any).shipping_details?.address) {
+          const addr = (sessionWithDetails as any).shipping_details.address;
           shippingAddress = [
             addr.line1,
             addr.line2,
@@ -140,7 +145,11 @@ export async function POST(request: NextRequest) {
               const customer = typeof invoice.customer === 'string'
                 ? await stripe.customers.retrieve(invoice.customer)
                 : invoice.customer;
-              customerName = customer.name || customer.email || 'Customer';
+              if (customer.deleted) {
+                customerName = 'Customer';
+              } else {
+                customerName = customer.name || customer.email || 'Customer';
+              }
             } catch (err) {
               console.error('Error retrieving customer:', err);
             }
@@ -159,14 +168,18 @@ export async function POST(request: NextRequest) {
                 const customer = typeof session.customer === 'string'
                   ? await stripe.customers.retrieve(session.customer)
                   : session.customer;
-                customerName = customer.name || customer.email || 'Customer';
+                if (customer.deleted) {
+                  customerName = 'Customer';
+                } else {
+                  customerName = customer.name || customer.email || 'Customer';
+                }
               } catch (err) {
                 console.error('Error retrieving customer:', err);
               }
             }
             
-            if (session.shipping_details?.address) {
-              const addr = session.shipping_details.address;
+            if ((session as any).shipping_details?.address) {
+              const addr = (session as any).shipping_details.address;
               shippingAddress = [
                 addr.line1,
                 addr.line2,
