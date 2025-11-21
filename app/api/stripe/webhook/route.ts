@@ -351,11 +351,11 @@ export async function POST(request: NextRequest) {
       }
       
       if (deliveryType) {
-        message += `TYPE: ${deliveryType}\n`;
+        message += `Type: ${deliveryType}\n`;
       }
       
       if (shippingAddress) {
-        message += `ADDRESS: ${shippingAddress}\n\n`;
+        message += `Address: ${shippingAddress}\n\n`;
       }
       
       message += `Total: ${currency.toUpperCase()} ${amount?.toFixed(2) || '0.00'}`;
