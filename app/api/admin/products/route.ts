@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     const productsWithPrices = await Promise.all(
       products.data.map(async (product) => {
         const isShipping = product.id === process.env.NEXT_PUBLIC_SHIPPING_PRODUCT_ID;
-        if (isShipping) {
+        const isLocalDelivery = product.id === 'prod_TSgjj9alx4MKo3';
+        if (isShipping || isLocalDelivery) {
           return null;
         }
 
