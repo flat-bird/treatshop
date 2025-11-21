@@ -84,35 +84,33 @@ export async function POST(request: NextRequest) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
     const successUrl = `${baseUrl}/thanks?success=true`;
+    const cancelUrl = `${baseUrl}/checkout`;
 
-    const paymentLinkConfig: Stripe.PaymentLinkCreateParams = {
+    const checkoutSessionConfig: Stripe.Checkout.SessionCreateParams = {
       line_items: lineItems,
       shipping_address_collection: {
         allowed_countries: ['CA'],
       },
       allow_promotion_codes: true,
       customer_creation: 'always',
-      after_completion: {
-        type: 'redirect',
-        redirect: {
-          url: successUrl,
-        },
-      },
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     };
 
     if (deliveryMethod === 'local') {
-      paymentLinkConfig.custom_text = {
+      checkoutSessionConfig.custom_text = {
         shipping_address: {
           message: 'The address you enter will be used for local delivery (Campbell River area only).',
         },
       };
     }
 
-    const paymentLink = await stripe.paymentLinks.create(paymentLinkConfig);
+    const session = await stripe.checkout.sessions.create(checkoutSessionConfig);
 
-    return NextResponse.json({ url: paymentLink.url });
+    return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error('Error creating payment link:', error);
+    console.error('Error creating checkout session:', error);
     if (error instanceof Error) {
       console.error(`Error message: ${error.message}`);
       console.error(`Error stack: ${error.stack}`);
@@ -121,7 +119,7 @@ export async function POST(request: NextRequest) {
       console.error(`Stripe error type: ${error.type}`);
     }
     return NextResponse.json(
-      { error: 'Failed to create payment link', info: JSON.stringify(error) },
+      { error: 'Failed to create checkout session', info: JSON.stringify(error) },
       { status: 500 }
     );
   }

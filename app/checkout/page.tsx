@@ -80,13 +80,13 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        console.error('Payment link creation failed:', {
+        console.error('Checkout session creation failed:', {
           status: response.status,
           statusText: response.statusText,
           error: data.error,
           unavailableItems: data.unavailableItems,
         });
-        throw new Error(data.error || 'Failed to create payment link');
+        throw new Error(data.error || 'Failed to create checkout session');
       }
 
       const data = await response.json();

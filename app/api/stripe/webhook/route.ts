@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   try {
     const eventType = event.type as string;
     
-    if (eventType === 'payment_intent.succeeded' || eventType === 'checkout.session.completed' || eventType === 'payment_link.payment_succeeded') {
+    if (eventType === 'payment_intent.succeeded' || eventType === 'checkout.session.completed') {
       const phoneNumber = process.env.TWILIO_RECIPIENT_PHONE_NUMBER;
       
       if (!phoneNumber) {
@@ -123,61 +123,6 @@ export async function POST(request: NextRequest) {
             addr.postal_code,
             addr.country
           ].filter(Boolean).join(', ');
-        }
-      } else if (eventType === 'payment_link.payment_succeeded') {
-        const paymentLinkEvent = event.data.object as any;
-        amount = paymentLinkEvent.amount_total ? paymentLinkEvent.amount_total / 100 : null;
-        currency = paymentLinkEvent.currency || 'usd';
-        
-        if (paymentLinkEvent.payment_intent) {
-          try {
-            const paymentIntent = await stripe.paymentIntents.retrieve(paymentLinkEvent.payment_intent);
-            if (paymentIntent.metadata?.session_id) {
-              const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata.session_id, {
-                expand: ['line_items.data.price.product', 'customer', 'customer_details'],
-              });
-              lineItems = session.line_items?.data || [];
-              
-              if (session.customer_details?.name) {
-                customerName = session.customer_details.name;
-              } else if (session.customer) {
-                try {
-                  const customer = typeof session.customer === 'string'
-                    ? await stripe.customers.retrieve(session.customer)
-                    : session.customer;
-                  customerName = customer.name || customer.email || 'Customer';
-                } catch (err) {
-                  console.error('Error retrieving customer:', err);
-                }
-              }
-              
-              if (session.shipping_details?.address) {
-                const addr = session.shipping_details.address;
-                shippingAddress = [
-                  addr.line1,
-                  addr.line2,
-                  addr.city,
-                  addr.state,
-                  addr.postal_code,
-                  addr.country
-                ].filter(Boolean).join(', ');
-              }
-            }
-          } catch (err) {
-            console.error('Error retrieving payment intent:', err);
-          }
-        }
-        
-        if (lineItems.length === 0 && paymentLinkEvent.payment_link) {
-          try {
-            const lineItemsList = await stripe.paymentLinks.listLineItems(paymentLinkEvent.payment_link, {
-              limit: 100,
-              expand: ['data.price.product'],
-            });
-            lineItems = lineItemsList.data;
-          } catch (err) {
-            console.error('Error retrieving payment link line items:', err);
-          }
         }
       } else if (eventType === 'payment_intent.succeeded') {
         const paymentIntent = event.data.object as any;
