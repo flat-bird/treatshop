@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
 export interface CartItem {
@@ -155,10 +155,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([]);
     localStorage.removeItem('cart');
-  };
+  }, []);
 
   const getTotalItems = () => {
     return items.reduce((sum, item) => sum + item.quantity, 0);

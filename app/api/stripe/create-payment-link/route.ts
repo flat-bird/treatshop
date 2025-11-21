@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
+import Stripe from 'stripe';
 
 export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { items } = body;
+    const { items, deliveryMethod } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -84,18 +85,30 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
     const successUrl = `${baseUrl}/thanks?success=true`;
 
-    const paymentLink = await stripe.paymentLinks.create({
+    const paymentLinkConfig: Stripe.PaymentLinkCreateParams = {
       line_items: lineItems,
       shipping_address_collection: {
         allowed_countries: ['CA'],
       },
+      allow_promotion_codes: true,
+      customer_creation: 'always',
       after_completion: {
         type: 'redirect',
         redirect: {
           url: successUrl,
         },
       },
-    });
+    };
+
+    if (deliveryMethod === 'local') {
+      paymentLinkConfig.custom_text = {
+        shipping_address: {
+          message: 'The address you enter will be used for local delivery (Campbell River area only).',
+        },
+      };
+    }
+
+    const paymentLink = await stripe.paymentLinks.create(paymentLinkConfig);
 
     return NextResponse.json({ url: paymentLink.url });
   } catch (error) {
@@ -108,7 +121,7 @@ export async function POST(request: NextRequest) {
       console.error(`Stripe error type: ${error.type}`);
     }
     return NextResponse.json(
-      { error: 'Failed to create payment link' },
+      { error: 'Failed to create payment link', info: JSON.stringify(error) },
       { status: 500 }
     );
   }

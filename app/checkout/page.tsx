@@ -75,7 +75,7 @@ export default function CheckoutPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ items: checkoutItems }),
+        body: JSON.stringify({ items: checkoutItems, deliveryMethod }),
       });
 
       if (!response.ok) {

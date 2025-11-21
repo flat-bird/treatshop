@@ -43,7 +43,7 @@ function ThanksContent() {
               Your order has been received. We appreciate your business!
             </p>
             <p className="text-gray-400 mb-8">
-              You will receive a confirmation email shortly with your order details.
+              You will receive an email shortly with your order details and receipt.
             </p>
             <div className="flex gap-4 justify-center">
               <Button href="/shop" variant="primary">
