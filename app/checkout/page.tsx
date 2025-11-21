@@ -36,6 +36,23 @@ export default function CheckoutPage() {
         quantity: item.quantity,
       }));
 
+      if (deliveryMethod === 'local') {
+        try {
+          const localDeliveryResponse = await fetch('/api/stripe/local-delivery-price');
+          if (localDeliveryResponse.ok) {
+            const localDeliveryData = await localDeliveryResponse.json();
+            if (localDeliveryData.priceId) {
+              checkoutItems.push({
+                priceId: localDeliveryData.priceId,
+                quantity: 1,
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching local delivery price:', err);
+        }
+      }
+
       if (deliveryMethod === 'shipping' && shippingProductId) {
         try {
           const shippingResponse = await fetch('/api/stripe/shipping-price');
@@ -63,12 +80,23 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         const data = await response.json();
+        console.error('Payment link creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          unavailableItems: data.unavailableItems,
+        });
         throw new Error(data.error || 'Failed to create payment link');
       }
 
       const data = await response.json();
       window.location.href = data.url;
     } catch (err) {
+      console.error('Error in checkout process:', err);
+      if (err instanceof Error) {
+        console.error(`Error message: ${err.message}`);
+        console.error(`Error stack: ${err.stack}`);
+      }
       setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }

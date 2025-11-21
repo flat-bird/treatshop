@@ -55,6 +55,10 @@ export async function POST(request: NextRequest) {
           }
         } catch (error) {
           console.error(`Error checking price ${item.priceId}:`, error);
+          if (error instanceof Error) {
+            console.error(`Error message: ${error.message}`);
+            console.error(`Error stack: ${error.stack}`);
+          }
           unavailableItems.push('Unknown product');
         }
       })
@@ -82,6 +86,9 @@ export async function POST(request: NextRequest) {
 
     const paymentLink = await stripe.paymentLinks.create({
       line_items: lineItems,
+      shipping_address_collection: {
+        allowed_countries: ['CA'],
+      },
       after_completion: {
         type: 'redirect',
         redirect: {
@@ -93,6 +100,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: paymentLink.url });
   } catch (error) {
     console.error('Error creating payment link:', error);
+    if (error instanceof Error) {
+      console.error(`Error message: ${error.message}`);
+      console.error(`Error stack: ${error.stack}`);
+    }
+    if (error && typeof error === 'object' && 'type' in error) {
+      console.error(`Stripe error type: ${error.type}`);
+    }
     return NextResponse.json(
       { error: 'Failed to create payment link' },
       { status: 500 }
