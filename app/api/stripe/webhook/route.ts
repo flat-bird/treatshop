@@ -78,22 +78,110 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      let message = 'Payment received!';
+      let message = '';
       let amount = null;
       let currency = 'usd';
+      let lineItems: any[] = [];
 
-      if (eventType === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object as any;
-        amount = paymentIntent.amount / 100;
-        currency = paymentIntent.currency;
-        message = `Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received successfully!`;
-      } else if (eventType === 'checkout.session.completed') {
+      if (eventType === 'checkout.session.completed') {
         const session = event.data.object as any;
         amount = session.amount_total / 100;
         currency = session.currency;
-        message = `Checkout completed! Payment of ${currency.toUpperCase()} ${amount.toFixed(2)} received.`;
+        
+        const sessionWithLineItems = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ['line_items.data.price.product'],
+        });
+        
+        lineItems = sessionWithLineItems.line_items?.data || [];
       } else if (eventType === 'payment_link.payment_succeeded') {
-        message = 'Payment link payment succeeded!';
+        const paymentLinkEvent = event.data.object as any;
+        amount = paymentLinkEvent.amount_total ? paymentLinkEvent.amount_total / 100 : null;
+        currency = paymentLinkEvent.currency || 'usd';
+        
+        if (paymentLinkEvent.payment_intent) {
+          try {
+            const paymentIntent = await stripe.paymentIntents.retrieve(paymentLinkEvent.payment_intent);
+            if (paymentIntent.metadata?.session_id) {
+              const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata.session_id, {
+                expand: ['line_items.data.price.product'],
+              });
+              lineItems = session.line_items?.data || [];
+            }
+          } catch (err) {
+            console.error('Error retrieving payment intent:', err);
+          }
+        }
+        
+        if (lineItems.length === 0 && paymentLinkEvent.payment_link) {
+          try {
+            const lineItemsList = await stripe.paymentLinks.listLineItems(paymentLinkEvent.payment_link, {
+              limit: 100,
+              expand: ['data.price.product'],
+            });
+            lineItems = lineItemsList.data;
+          } catch (err) {
+            console.error('Error retrieving payment link line items:', err);
+          }
+        }
+      } else if (eventType === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object as any;
+        amount = paymentIntent.amount / 100;
+        currency = paymentIntent.currency;
+        
+        if (paymentIntent.invoice) {
+          const invoice = await stripe.invoices.retrieve(paymentIntent.invoice, {
+            expand: ['lines.data.price.product'],
+          });
+          lineItems = invoice.lines.data;
+        } else if (paymentIntent.metadata?.session_id) {
+          try {
+            const session = await stripe.checkout.sessions.retrieve(paymentIntent.metadata.session_id, {
+              expand: ['line_items.data.price.product'],
+            });
+            lineItems = session.line_items?.data || [];
+          } catch (err) {
+            console.error('Error retrieving session:', err);
+          }
+        }
+      }
+
+      const purchaseDetails: string[] = [];
+      
+      for (const item of lineItems) {
+        try {
+          const quantity = item.quantity || 1;
+          const price = item.price;
+          let productName = 'Unknown Product';
+          
+          if (price?.product) {
+            try {
+              const product = typeof price.product === 'string' 
+                ? await stripe.products.retrieve(price.product)
+                : price.product;
+              productName = product?.name || 'Unknown Product';
+            } catch (err) {
+              console.error('Error retrieving product:', err);
+              productName = price.description || 'Unknown Product';
+            }
+          } else if (item.description) {
+            productName = item.description;
+          }
+          
+          const itemAmount = price?.unit_amount ? (price.unit_amount / 100) : 0;
+          const itemTotal = itemAmount * quantity;
+          
+          purchaseDetails.push(`${productName} x${quantity} - ${currency.toUpperCase()} ${itemTotal.toFixed(2)}`);
+        } catch (err) {
+          console.error('Error processing line item:', err);
+        }
+      }
+
+      if (purchaseDetails.length > 0) {
+        message = `New Order!\n\n`;
+        message += purchaseDetails.join('\n');
+        message += `\n\nTotal: ${currency.toUpperCase()} ${amount?.toFixed(2) || '0.00'}`;
+      } else {
+        message = `Payment of ${currency.toUpperCase()} ${amount?.toFixed(2) || '0.00'} received successfully!`;
       }
 
       await sendSMS(phoneNumber, message);

@@ -303,7 +303,7 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium mb-2 text-[var(--foreground)]">
-                            Price ({product.price?.currency.toUpperCase() || 'USD'})
+                            Price ({product.price?.currency.toUpperCase() || 'CAD'})
                           </label>
                           <input
                             type="number"
