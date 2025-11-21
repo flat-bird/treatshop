@@ -6,10 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "pages:build": "npx opennextjs-cloudflare build",
-    "preview": "npx opennextjs-cloudflare preview",
-    "deploy": "npx opennextjs-cloudflare build && npx wrangler pages deploy .opennext"
+    "lint": "eslint"
   },
   "dependencies": {
     "next": "16.0.1",
@@ -20,7 +17,6 @@
     "twilio": "^5.10.5"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.12.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
