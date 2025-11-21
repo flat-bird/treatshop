@@ -3,6 +3,19 @@ import { stripe } from '@/lib/stripe';
 import Stripe from 'stripe';
 import twilio from 'twilio';
 
+type CheckoutSessionWithShipping = {
+  shipping_details?: {
+    address?: {
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postal_code?: string | null;
+      country?: string | null;
+    } | null;
+  } | null;
+};
+
 export const runtime = 'nodejs';
 
 function getTwilioClient() {
@@ -82,7 +95,14 @@ export async function POST(request: NextRequest) {
       let message = '';
       let amount = null;
       let currency = 'usd';
-      let lineItems: any[] = [];
+      let lineItems: Array<{
+        quantity?: number | null;
+        price?: {
+          product?: string | { id: string; name?: string | null } | null;
+          description?: string | null;
+        } | null;
+        description?: string | null;
+      }> = [];
       let customerName = 'Customer';
       let shippingAddress = '';
       let deliveryType = '';
@@ -91,9 +111,9 @@ export async function POST(request: NextRequest) {
       const shippingProductId = process.env.NEXT_PUBLIC_SHIPPING_PRODUCT_ID;
 
       if (eventType === 'checkout.session.completed') {
-        const session = event.data.object as any;
-        amount = session.amount_total / 100;
-        currency = session.currency;
+        const session = event.data.object as Stripe.Checkout.Session;
+        amount = (session.amount_total ?? 0) / 100;
+        currency = session.currency ?? 'usd';
         
         const sessionWithDetails = await stripe.checkout.sessions.retrieve(session.id, {
           expand: ['line_items.data.price.product', 'customer', 'customer_details'],
@@ -118,8 +138,24 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        if ((sessionWithDetails as any).shipping_details?.address) {
-          const addr = (sessionWithDetails as any).shipping_details.address;
+        // Try collected_information.shipping_details.address first (from webhook event)
+        const sessionWithCollectedInfo = session as typeof session & {
+          collected_information?: {
+            shipping_details?: {
+              address?: {
+                line1?: string | null;
+                line2?: string | null;
+                city?: string | null;
+                state?: string | null;
+                postal_code?: string | null;
+                country?: string | null;
+              } | null;
+            } | null;
+          } | null;
+        };
+        
+        if (sessionWithCollectedInfo.collected_information?.shipping_details?.address) {
+          const addr = sessionWithCollectedInfo.collected_information.shipping_details.address;
           shippingAddress = [
             addr.line1,
             addr.line2,
@@ -128,14 +164,40 @@ export async function POST(request: NextRequest) {
             addr.postal_code,
             addr.country
           ].filter(Boolean).join(', ');
+        } else {
+          // Fallback to shipping_details on retrieved session
+          const sessionWithShipping = sessionWithDetails as typeof sessionWithDetails & CheckoutSessionWithShipping;
+          if (sessionWithShipping.shipping_details?.address) {
+            const addr = sessionWithShipping.shipping_details.address;
+            shippingAddress = [
+              addr.line1,
+              addr.line2,
+              addr.city,
+              addr.state,
+              addr.postal_code,
+              addr.country
+            ].filter(Boolean).join(', ');
+          } else {
+            console.log('No shipping_details found in session:', {
+              sessionId: sessionWithDetails.id,
+              hasCollectedInfo: !!sessionWithCollectedInfo.collected_information,
+              hasShippingDetails: !!sessionWithShipping.shipping_details,
+              collectedInfo: sessionWithCollectedInfo.collected_information,
+              shippingDetails: sessionWithShipping.shipping_details
+            });
+          }
         }
       } else if (eventType === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object as any;
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
         amount = paymentIntent.amount / 100;
         currency = paymentIntent.currency;
         
-        if (paymentIntent.invoice) {
-          const invoice = await stripe.invoices.retrieve(paymentIntent.invoice, {
+        const paymentIntentWithInvoice = paymentIntent as typeof paymentIntent & { invoice?: string | Stripe.Invoice | null };
+        if (paymentIntentWithInvoice.invoice) {
+          const invoiceId = typeof paymentIntentWithInvoice.invoice === 'string' 
+            ? paymentIntentWithInvoice.invoice 
+            : paymentIntentWithInvoice.invoice.id;
+          const invoice = await stripe.invoices.retrieve(invoiceId, {
             expand: ['lines.data.price.product', 'customer'],
           });
           lineItems = invoice.lines.data;
@@ -178,8 +240,24 @@ export async function POST(request: NextRequest) {
               }
             }
             
-            if ((session as any).shipping_details?.address) {
-              const addr = (session as any).shipping_details.address;
+            // Try collected_information.shipping_details.address first (from webhook event)
+            const sessionWithCollectedInfo = session as typeof session & {
+              collected_information?: {
+                shipping_details?: {
+                  address?: {
+                    line1?: string | null;
+                    line2?: string | null;
+                    city?: string | null;
+                    state?: string | null;
+                    postal_code?: string | null;
+                    country?: string | null;
+                  } | null;
+                } | null;
+              } | null;
+            };
+            
+            if (sessionWithCollectedInfo.collected_information?.shipping_details?.address) {
+              const addr = sessionWithCollectedInfo.collected_information.shipping_details.address;
               shippingAddress = [
                 addr.line1,
                 addr.line2,
@@ -188,6 +266,28 @@ export async function POST(request: NextRequest) {
                 addr.postal_code,
                 addr.country
               ].filter(Boolean).join(', ');
+            } else {
+              // Fallback to shipping_details on retrieved session
+              const sessionWithShipping = session as typeof session & CheckoutSessionWithShipping;
+              if (sessionWithShipping.shipping_details?.address) {
+                const addr = sessionWithShipping.shipping_details.address;
+                shippingAddress = [
+                  addr.line1,
+                  addr.line2,
+                  addr.city,
+                  addr.state,
+                  addr.postal_code,
+                  addr.country
+                ].filter(Boolean).join(', ');
+              } else {
+                console.log('No shipping_details found in session from payment_intent:', {
+                  sessionId: session.id,
+                  hasCollectedInfo: !!sessionWithCollectedInfo.collected_information,
+                  hasShippingDetails: !!sessionWithShipping.shipping_details,
+                  collectedInfo: sessionWithCollectedInfo.collected_information,
+                  shippingDetails: sessionWithShipping.shipping_details
+                });
+              }
             }
           } catch (err) {
             console.error('Error retrieving session:', err);
@@ -243,8 +343,7 @@ export async function POST(request: NextRequest) {
         deliveryType = 'Shipping';
       }
 
-      message = `MAGGIES TREATS - NEW ORDER!\n\n`;
-      message += `${customerName} placed an order!\n\n`;
+      message = `New Order from ${customerName}!\n\n`;
       
       if (purchaseDetails.length > 0) {
         message += purchaseDetails.join('\n');
